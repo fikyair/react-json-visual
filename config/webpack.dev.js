@@ -14,7 +14,7 @@ module.exports = merge(common, {
   // Spin up a server for quick development
   devServer: {
     historyApiFallback: true,
-    // contentBase: paths.build,
+    static: paths.build,   // 额外生成一个根目录，用来存放静态文件
     open: true,
     compress: true,
     hot: true,
