@@ -1,7 +1,7 @@
 import React from 'react'
 import logo from './logo.svg'
 import styles from './App.less'
-
+console.log('loader实验', '#routeBasePath#')
 function App() {
   return (
     <div className={styles.App}>

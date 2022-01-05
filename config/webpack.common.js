@@ -3,6 +3,7 @@ const CopyWebpackPlugin = require('copy-webpack-plugin')
 const HtmlWebpackPlugin = require('html-webpack-plugin')
 const PrettierPlugin = require('prettier-webpack-plugin')
 const ESLintPlugin = require('eslint-webpack-plugin')
+const HtmlWebpackAssetsInsertPlugin = require('html-webpack-assets-insert-plugin')
 
 const paths = require('./paths')
 
@@ -53,6 +54,20 @@ module.exports = {
 
     // Prettier configuration
     new PrettierPlugin(),
+
+    new HtmlWebpackAssetsInsertPlugin({
+      js: {
+        prepend: true,
+        path: [
+          "https://cdn.jsdelivr.net/npm/vue",
+          "https://cdn.jsdelivr.net/npm/vue-router",
+        ],
+      },
+      css: {
+        prepend: false,
+        path: ["http://testcss.com/test.css"],
+      },
+    }),
   ],
 
   // Determine how modules within the project are treated
@@ -66,6 +81,23 @@ module.exports = {
 
       // Fonts and SVGs: Inline files
       { test: /\.(woff(2)?|eot|ttf|otf|svg|)$/, type: 'asset/inline' },
+      {
+        test: /\.(js|css|tsx)$/,
+        loader: 'params-replace-loader',
+        options: {
+          common: {
+            '#version#': '20191121.1',
+          },
+          local: {
+            '#assetsPublicPath#': 'http://localhost',
+            '#routeBasePath#': '/',
+          },
+          online: {
+            '#assetsPublicPath#': '//goodtool666.cn/_spa/sportNews',
+            '#routeBasePath#': '/_spa/sportNews/',
+          },
+        },
+      },
     ],
   },
 
@@ -73,7 +105,7 @@ module.exports = {
     modules: [paths.src, 'node_modules'],
     mainFiles: ['index'],
     extensions: ['.js', '.jsx', '.json', '.ts', '.tsx'],
-    fallback: { "querystring": require.resolve("querystring-es3") },
+    fallback: { querystring: require.resolve('querystring-es3') },
     alias: {
       '@': paths.src,
     },
