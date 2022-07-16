@@ -64,6 +64,21 @@ export function extendDeep(item: any) {
 }
 
 export class Utils {
+  public static inRect(
+    rect: [number, number, number, number],
+    point: [number, number]
+  ) {
+    if (!rect || !point) {
+      return false
+    }
+    return !(
+      point[0] < rect[0] ||
+      point[0] > rect[0] + rect[2] ||
+      point[1] < rect[1] ||
+      point[1] > rect[1] + rect[3]
+    )
+  }
+
   public static clamp(
     value: number,
     min: number | undefined = undefined,

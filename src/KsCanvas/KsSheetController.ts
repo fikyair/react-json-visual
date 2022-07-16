@@ -42,11 +42,9 @@ export class KsSheetController {
   }
 
   public frame(e: any) {
-    debugger
     if (this._data && this.data.isProcessPadding) {
       new Promise(async () => {
         const renderData = await this._data.processData()
-        console.log('renderData: ', renderData)
         if (!renderData) {
           return
         }
