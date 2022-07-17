@@ -98,3 +98,24 @@ export class Utils {
     return value < min ? min : value > max ? max : value
   }
 }
+
+const ICON_SEPARATOR = 50 + 16
+const ICON_SIZE = 16
+
+function iconRect(
+  r: number,
+  c: number,
+  iconSize: number = ICON_SIZE
+): [number, number, number, number] {
+  return [
+    ICON_SEPARATOR * c - iconSize * 0.5 - 8,
+    ICON_SEPARATOR * r - iconSize * 0.5 - 8,
+    iconSize,
+    iconSize,
+  ]
+}
+
+export const ICON_ADD_COLUMN_RECT: [number, number, number, number] = iconRect(
+  4,
+  3
+)

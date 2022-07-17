@@ -9,6 +9,7 @@ import React, {
 } from 'react'
 import useUpdateFunction from './hooks/useUpdateFunction'
 import useSyncCallback from './hooks/useAsyncCallback'
+import icon from './utils/icons.png'
 
 import { Utils } from './utils/tools'
 
@@ -18,19 +19,15 @@ function App() {
   const offsetCanvas = useRef<HTMLCanvasElement>(null)
   const offsetCtx = useRef<HTMLCanvasElement>(null)
   const [getCur, setCur] = useState(() => ({ curX: 0, curY: 0 }))
-  const [point, setPoint] = useState(() => ({ pointX: 0, pointY: 0 }))
+  const [point, setPoint] = useState(() => ({ pointX: -1, pointY: -1 }))
+  const [progress, setProgressing] = useState<NN | BB>(false)
   const [tabConfig, setTabConfig] = useState(() => ({
     colNum: 13,
     RowNum: 6,
     colWidth: 220,
   }))
 
-  useEffect(() => {
-    const tableCtx = curCanvas.current.getContext('2d') // 得到渲染上下文
-    dpr(tableCtx)
-
-    // dpr(offsetCtx)
-  }, [])
+  const [popover, setPopover] = useState({})
 
   useEffect(() => {
     if (curCanvas.current) {
@@ -66,31 +63,48 @@ function App() {
     ctx.stroke()
   }
 
-  const onWheel = useUpdateFunction((e: WheelEvent) => {
+  const frame = useSyncCallback(() => {
+    if (progress) {
+      //在动画没有结束前，递归渲染
+      renderer()
+    }
+    window.requestAnimationFrame(frame)
+  })
+
+  const renderer = useSyncCallback(() => {
     if (curCanvas.current) {
       const tableCtx = curCanvas.current.getContext('2d') // 得到渲染上下文
       const canvasWidth = tableCtx.canvas.width
       const canvasHeight = tableCtx.canvas.height
       tableCtx.clearRect(0, 0, canvasWidth, canvasHeight)
-      setCur((pre) => ({
-        curX: pre.curX + e.deltaX,
-        curY: pre.curY + e.deltaY,
-      }))
-      // console.log(' e.deltaY: ', e.deltaY)
-      const _curX = getCur.curX + e.deltaX
-      const _curY = getCur.curY + e.deltaY
-
-      const curX = Utils.clamp(_curX, 0, 1708)
-      const __curY = Utils.clamp(_curY, 0, 3000)
-      // console.log('__curY: ', __curY)
+      const curX = Utils.clamp(getCur.curX, 0, 1708)
+      const __curY = Utils.clamp(getCur.curY, 0, 3000)
       const curY = RowHeight - (__curY % RowHeight)
       // 向下滑动触摸板 deltaY 是正，__curY 不断增大，curY 结果不断减小，每条线的绘制起始点不断减小，所以表现为向上滚动
       setCur({ curX: curX, curY: __curY })
       drawHLines(tableCtx, tableCtx?.canvas.width, curY + 40) // 留出标题行
       drawVLines(tableCtx, tableCtx?.canvas.height, curX) // 留出序号列
-
       drawData(tableCtx, offsetCtx.current, offsetCanvas.current, curX, curY) // 画数据
     }
+  })
+
+  useEffect(() => {
+    const tableCtx = curCanvas.current.getContext('2d') // 得到渲染上下文
+    dpr(tableCtx)
+    // dpr(offsetCtx)
+  }, [])
+
+  useEffect(() => {
+    window.requestAnimationFrame(frame)
+  }, [])
+
+  const onWheel = useUpdateFunction((e: WheelEvent) => {
+    setCur((pre) => {
+      return {
+        curX: pre.curX + e.deltaX,
+        curY: pre.curY + e.deltaY,
+      }
+    })
   })
 
   const drawData = (
@@ -117,7 +131,6 @@ function App() {
     //   offsetCanvas.width,
     //   offsetCanvas.height
     // )
-
     // tableCtx.putImageData(imageData, 100, 100)
     tableCtx.drawImage(offsetCanvas, 59 + 0.5, 40)
   }
@@ -158,6 +171,19 @@ function App() {
     }
   }
 
+  const drawStatus = (
+    tableCtx: CanvasRenderingContext2D,
+    canvasWidth: number
+  ) => {
+    tableCtx.moveTo(0, 40 + 0.5)
+    tableCtx.lineTo(canvasWidth, 40 + 0.5)
+    // 画 icons
+    let myIcons = new Image()
+    myIcons.src = icon
+    // offsetCtx.current.drawImage(myIcons, 50, 50, 50, 50, 100, 10, 80, 80)
+    tableCtx.drawImage(myIcons, 50, 50, 50, 50, 100, 10, 80, 80)
+  }
+
   // 画水平线
   const drawHLines = (
     tableCtx: CanvasRenderingContext2D,
@@ -166,8 +192,7 @@ function App() {
   ) => {
     tableCtx.beginPath()
     // 画标题栏
-    tableCtx.moveTo(0, 40 + 0.5)
-    tableCtx.lineTo(canvasWidth, 40 + 0.5)
+    drawStatus(tableCtx, canvasWidth)
     tableCtx.strokeStyle = 'green'
     while (curY < 500) {
       tableCtx.moveTo(0 + 0.5, curY + 0.5)
@@ -187,7 +212,20 @@ function App() {
     const areaIndexIndexRect = [0, 0, 59 + 0.5, canvasHeight]
 
     const click = Utils.inRect(areaIndexIndexRect, [point.pointX, point.pointY])
-    console.log('click: ', click)
+
+    if (click) {
+      // onColEditClick，可以绑定在 canvas 的 ref 上，暴露给外界
+      setPopover({
+        display: 'block',
+        position: 'absolute',
+        top: `${point.pointY}px`,
+        left: `${point.pointX}px`,
+      })
+    } else {
+      setPopover({
+        display: 'none',
+      })
+    }
   }
 
   // 画垂直线
@@ -259,9 +297,9 @@ function App() {
       window.removeEventListener('mousedown', onMousedown)
     }
   }, [])
-
+  // console.log('popover: ', popover)
   return (
-    <div style={{ margin: 20 }}>
+    <div style={{ margin: 20, position: 'absolute' }}>
       {/* <KsUserSheet
         ref={ksSheetRef}
         sheetId={sheetId}
@@ -278,6 +316,22 @@ function App() {
         onDataLoading={onDataLoading1}
       /> */}
       <canvas id="canvas" ref={curCanvas} height={450} width={1156} />
+      <div
+        style={{
+          width: 100,
+          height: 200,
+          display: 'none',
+          background: '#fff',
+          boxShadow: '2px 2px 0px 0px #f4f4f4',
+          borderRadius: '4px',
+          ...popover,
+        }}
+      >
+        hi
+      </div>
+
+      <button onClick={() => setProgressing(true)}>开始渲染</button>
+      <button onClick={() => setProgressing(false)}>停止渲染</button>
     </div>
   )
 }
